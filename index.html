@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>罫線ノートPDFジェネレーター</title>
+    <meta name="description" content="横罫線ノートのPDFを自由にカスタマイズして生成できるツール">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- ヘッダー -->
+        <header class="app-header">
+            <div class="header-glow"></div>
+            <h1 class="app-title">
+                <span class="title-icon">📝</span>
+                罫線ノート PDF ジェネレーター
+            </h1>
+            <p class="app-subtitle">お好みの罫線幅でオリジナルノートを作成</p>
+        </header>
+
+        <main class="main-content">
+            <!-- 設定パネル -->
+            <section class="settings-panel" id="settingsPanel">
+                <h2 class="section-title">
+                    <span class="section-icon">⚙️</span>
+                    設定
+                </h2>
+
+                <div class="settings-grid">
+                    <!-- 用紙サイズ -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="pageSize">用紙サイズ</label>
+                        <select id="pageSize" class="setting-select">
+                            <option value="a3">A3 (297 × 420mm)</option>
+                            <option value="a4" selected>A4 (210 × 297mm)</option>
+                            <option value="a5">A5 (148 × 210mm)</option>
+                            <option value="a6">A6 (105 × 148mm)</option>
+                            <option value="b4">B4 (250 × 353mm)</option>
+                            <option value="b5">B5 (176 × 250mm)</option>
+                            <option value="b6">B6 (128 × 182mm)</option>
+                            <option value="hagaki">ハガキ (100 × 148mm)</option>
+                            <option value="letter">Letter (216 × 279mm)</option>
+                        </select>
+                    </div>
+
+                    <!-- 用紙の向き -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="orientation">用紙の向き</label>
+                        <select id="orientation" class="setting-select">
+                            <option value="portrait" selected>縦 (ポートレート)</option>
+                            <option value="landscape">横 (ランドスケープ)</option>
+                        </select>
+                    </div>
+
+                    <!-- 罫線幅 -->
+                    <div class="setting-group highlight-setting">
+                        <label class="setting-label" for="lineSpacing">
+                            罫線の幅（行間）
+                            <span class="setting-value-display" id="lineSpacingValue">8mm</span>
+                        </label>
+                        <input type="range" id="lineSpacing" class="setting-range" min="3" max="20" value="8"
+                            step="0.25">
+                        <div class="range-labels">
+                            <span>3mm</span>
+                            <span>20mm</span>
+                        </div>
+                    </div>
+
+                    <!-- 罫線の色 -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="lineColor">罫線の色</label>
+                        <div class="color-options">
+                            <button class="color-btn active" data-color="#b0c4de" title="ライトブルー"
+                                style="--btn-color: #b0c4de;"></button>
+                            <button class="color-btn" data-color="#d3d3d3" title="グレー"
+                                style="--btn-color: #d3d3d3;"></button>
+                            <button class="color-btn" data-color="#ffb6c1" title="ピンク"
+                                style="--btn-color: #ffb6c1;"></button>
+                            <button class="color-btn" data-color="#98fb98" title="グリーン"
+                                style="--btn-color: #98fb98;"></button>
+                            <button class="color-btn" data-color="#dda0dd" title="パープル"
+                                style="--btn-color: #dda0dd;"></button>
+                            <input type="color" id="lineColor" class="color-picker" value="#b0c4de" title="カスタム色">
+                        </div>
+                    </div>
+
+                    <!-- 罫線の太さ -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="lineWidth">
+                            罫線の太さ
+                            <span class="setting-value-display" id="lineWidthValue">0.3pt</span>
+                        </label>
+                        <input type="range" id="lineWidth" class="setting-range" min="0.1" max="1.5" value="0.3"
+                            step="0.1">
+                        <div class="range-labels">
+                            <span>細い</span>
+                            <span>太い</span>
+                        </div>
+                    </div>
+
+                    <!-- 上下マージン -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="marginTop">
+                            上マージン
+                            <span class="setting-value-display" id="marginTopValue">21mm</span>
+                        </label>
+                        <input type="range" id="marginTop" class="setting-range" min="0" max="40" value="21" step="1">
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label" for="marginBottom">
+                            下マージン
+                            <span class="setting-value-display" id="marginBottomValue">10mm</span>
+                        </label>
+                        <input type="range" id="marginBottom" class="setting-range" min="0" max="40" value="10"
+                            step="1">
+                    </div>
+
+                    <!-- 左右マージン -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="marginLeft">
+                            左マージン
+                            <span class="setting-value-display" id="marginLeftValue">0mm</span>
+                        </label>
+                        <input type="range" id="marginLeft" class="setting-range" min="0" max="40" value="0" step="1">
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label" for="marginRight">
+                            右マージン
+                            <span class="setting-value-display" id="marginRightValue">0mm</span>
+                        </label>
+                        <input type="range" id="marginRight" class="setting-range" min="0" max="40" value="0" step="1">
+                    </div>
+
+                    <!-- ページ数 -->
+                    <div class="setting-group">
+                        <label class="setting-label" for="pageCount">ページ数</label>
+                        <input type="number" id="pageCount" class="setting-input" min="1" max="100" value="1">
+                    </div>
+
+                    <!-- プリセット -->
+                    <div class="setting-group full-width">
+                        <label class="setting-label">プリセット</label>
+                        <div class="preset-buttons">
+                            <button class="preset-btn" data-preset="college" id="presetCollege">
+                                <span class="preset-icon">📓</span>
+                                <span class="preset-name">大学ノート (7mm)</span>
+                            </button>
+                            <button class="preset-btn" data-preset="wide" id="presetWide">
+                                <span class="preset-icon">📒</span>
+                                <span class="preset-name">幅広 (10mm)</span>
+                            </button>
+                            <button class="preset-btn" data-preset="narrow" id="presetNarrow">
+                                <span class="preset-icon">📋</span>
+                                <span class="preset-name">細罫 (5mm)</span>
+                            </button>
+                            <button class="preset-btn" data-preset="elementary" id="presetElementary">
+                                <span class="preset-icon">✏️</span>
+                                <span class="preset-name">小学生用 (12mm)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- プレビュー＆生成 -->
+            <section class="preview-section" id="previewSection">
+                <h2 class="section-title">
+                    <span class="section-icon">👁️</span>
+                    プレビュー
+                </h2>
+
+                <div class="preview-container">
+                    <canvas id="previewCanvas" class="preview-canvas"></canvas>
+                    <div class="preview-info" id="previewInfo">
+                        <!-- 動的に情報を表示 -->
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="generate-btn" id="generateBtn">
+                        <span class="btn-icon">📄</span>
+                        PDFをダウンロード
+                        <span class="btn-shimmer"></span>
+                    </button>
+                    <button class="generate-btn secondary" id="openBtn">
+                        <span class="btn-icon">↗️</span>
+                        新しいタブで開く
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <p>罫線ノート PDF ジェネレーター — ブラウザ上で完結、データは保存されません</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
