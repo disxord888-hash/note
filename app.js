@@ -15,6 +15,7 @@ const PAGE_SIZES = {
 const els = {
     pageSize: document.getElementById('pageSize'),
     orientation: document.getElementById('orientation'),
+    lineType: document.getElementById('lineType'),
     lineSpacing: document.getElementById('lineSpacing'),
     lineSpacingValue: document.getElementById('lineSpacingValue'),
     lineColor: document.getElementById('lineColor'),
@@ -47,6 +48,7 @@ function getSettings() {
         sizeKey,
         sizeLabel: size.label,
         orientation: els.orientation.value,
+        lineType: els.lineType.value,
         lineSpacing: parseFloat(els.lineSpacing.value),
         lineColor: els.lineColor.value,
         lineWidth: parseFloat(els.lineWidth.value),
@@ -58,10 +60,14 @@ function getSettings() {
     };
 }
 
-// ===== 行数計算 =====
-function calcLineCount(settings) {
+// ===== 行数・列数計算 =====
+function calcCounts(settings) {
+    const drawableWidth = settings.pageWidth - settings.marginLeft - settings.marginRight;
     const drawableHeight = settings.pageHeight - settings.marginTop - settings.marginBottom;
-    return Math.floor(drawableHeight / settings.lineSpacing);
+    return {
+        rows: Math.floor(drawableHeight / settings.lineSpacing),
+        cols: Math.floor(drawableWidth / settings.lineSpacing)
+    };
 }
 
 // ===== プレビュー描画 =====
@@ -97,19 +103,53 @@ function drawPreview() {
     ctx.fillRect(0, mTop, mLeft, displayHeight - mTop - mBottom);
     ctx.fillRect(displayWidth - mRight, mTop, mRight, displayHeight - mTop - mBottom);
 
-    const lineCount = calcLineCount(s);
+    const counts = calcCounts(s);
     const spacingPx = s.lineSpacing * pxPerMm;
     const lineWidthPx = Math.max(0.5, s.lineWidth * pxPerMm * 0.8);
 
     ctx.strokeStyle = s.lineColor;
+    ctx.fillStyle = s.lineColor;
     ctx.lineWidth = lineWidthPx;
 
-    for (let i = 1; i <= lineCount; i++) {
-        const y = mTop + i * spacingPx;
-        ctx.beginPath();
-        ctx.moveTo(mLeft, y);
-        ctx.lineTo(displayWidth - mRight, y);
-        ctx.stroke();
+    const drawW = displayWidth - mLeft - mRight;
+    const drawH = displayHeight - mTop - mBottom;
+
+    if (s.lineType === 'ruled') {
+        for (let i = 1; i <= counts.rows; i++) {
+            const y = mTop + i * spacingPx;
+            ctx.beginPath();
+            ctx.moveTo(mLeft, y);
+            ctx.lineTo(displayWidth - mRight, y);
+            ctx.stroke();
+        }
+    } else if (s.lineType === 'graph') {
+        // 横線
+        for (let i = 0; i <= counts.rows; i++) {
+            const y = mTop + i * spacingPx;
+            ctx.beginPath();
+            ctx.moveTo(mLeft, y);
+            ctx.lineTo(mLeft + counts.cols * spacingPx, y);
+            ctx.stroke();
+        }
+        // 縦線
+        for (let j = 0; j <= counts.cols; j++) {
+            const x = mLeft + j * spacingPx;
+            ctx.beginPath();
+            ctx.moveTo(x, mTop);
+            ctx.lineTo(x, mTop + counts.rows * spacingPx);
+            ctx.stroke();
+        }
+    } else if (s.lineType === 'dot') {
+        const dotRadius = lineWidthPx * 0.8;
+        for (let i = 0; i <= counts.rows; i++) {
+            const y = mTop + i * spacingPx;
+            for (let j = 0; j <= counts.cols; j++) {
+                const x = mLeft + j * spacingPx;
+                ctx.beginPath();
+                ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     }
 
     const info = els.previewInfo;
@@ -119,12 +159,12 @@ function drawPreview() {
             <span class="info-value">${s.sizeLabel} ${s.orientation === 'landscape' ? '横' : '縦'}</span>
         </div>
         <div class="info-item">
-            <span class="info-label">罫線幅</span>
+            <span class="info-label">間隔</span>
             <span class="info-value">${s.lineSpacing}mm</span>
         </div>
         <div class="info-item">
-            <span class="info-label">行数/ページ</span>
-            <span class="info-value">${lineCount}行</span>
+            <span class="info-label">種類</span>
+            <span class="info-value">${s.lineType === 'ruled' ? '横罫線' : s.lineType === 'dot' ? 'ドット' : '方眼'}</span>
         </div>
         <div class="info-item">
             <span class="info-label">ページ数</span>
@@ -154,15 +194,37 @@ function createPDFDoc() {
     });
 
     const rgb = hexToRgb(s.lineColor);
-    const lineCount = calcLineCount(s);
+    const counts = calcCounts(s);
 
     for (let page = 0; page < s.pageCount; page++) {
         if (page > 0) doc.addPage();
         doc.setDrawColor(rgb.r, rgb.g, rgb.b);
-        doc.setLineWidth(s.lineWidth * 0.3528);
-        for (let i = 1; i <= lineCount; i++) {
-            const y = s.marginTop + i * s.lineSpacing;
-            doc.line(s.marginLeft, y, s.pageWidth - s.marginRight, y);
+        doc.setFillColor(rgb.r, rgb.g, rgb.b);
+        doc.setLineWidth(s.lineWidth * 0.3528); // pt -> mm
+
+        if (s.lineType === 'ruled') {
+            for (let i = 1; i <= counts.rows; i++) {
+                const y = s.marginTop + i * s.lineSpacing;
+                doc.line(s.marginLeft, y, s.pageWidth - s.marginRight, y);
+            }
+        } else if (s.lineType === 'graph') {
+            for (let i = 0; i <= counts.rows; i++) {
+                const y = s.marginTop + i * s.lineSpacing;
+                doc.line(s.marginLeft, y, s.marginLeft + counts.cols * s.lineSpacing, y);
+            }
+            for (let j = 0; j <= counts.cols; j++) {
+                const x = s.marginLeft + j * s.lineSpacing;
+                doc.line(x, s.marginTop, x, s.marginTop + counts.rows * s.lineSpacing);
+            }
+        } else if (s.lineType === 'dot') {
+            const dotR = s.lineWidth * 0.15; // mmでの半径目安
+            for (let i = 0; i <= counts.rows; i++) {
+                const y = s.marginTop + i * s.lineSpacing;
+                for (let j = 0; j <= counts.cols; j++) {
+                    const x = s.marginLeft + j * s.lineSpacing;
+                    doc.circle(x, y, dotR, 'F');
+                }
+            }
         }
     }
     return doc;
@@ -221,6 +283,7 @@ function setupColorButtons() {
 function applyPreset(preset) {
     switch (preset) {
         case 'college':
+            els.lineType.value = 'ruled';
             els.lineSpacing.value = 7;
             els.marginTop.value = 21;
             els.marginBottom.value = 10;
@@ -228,6 +291,7 @@ function applyPreset(preset) {
             els.marginRight.value = 0;
             break;
         case 'wide':
+            els.lineType.value = 'ruled';
             els.lineSpacing.value = 10;
             els.marginTop.value = 21;
             els.marginBottom.value = 10;
@@ -235,6 +299,7 @@ function applyPreset(preset) {
             els.marginRight.value = 0;
             break;
         case 'narrow':
+            els.lineType.value = 'ruled';
             els.lineSpacing.value = 5;
             els.marginTop.value = 21;
             els.marginBottom.value = 10;
@@ -242,6 +307,7 @@ function applyPreset(preset) {
             els.marginRight.value = 0;
             break;
         case 'elementary':
+            els.lineType.value = 'ruled';
             els.lineSpacing.value = 12;
             els.marginTop.value = 21;
             els.marginBottom.value = 10;
@@ -273,12 +339,15 @@ function updateAllDisplayValues() {
 function setupEventListeners() {
     els.pageSize.addEventListener('change', drawPreview);
     els.orientation.addEventListener('change', drawPreview);
+    els.lineType.addEventListener('change', drawPreview);
+
     [els.lineSpacing, els.lineWidth, els.marginTop, els.marginBottom, els.marginLeft, els.marginRight].forEach(el => {
         el.addEventListener('input', () => {
             updateAllDisplayValues();
             drawPreview();
         });
     });
+
     els.pageCount.addEventListener('change', drawPreview);
     els.generateBtn.addEventListener('click', downloadPDF);
     if (els.openBtn) els.openBtn.addEventListener('click', openPDFInNewTab);
