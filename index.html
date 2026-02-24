@@ -65,6 +65,8 @@
                         <label class="setting-label" for="lineType">罫線の種類</label>
                         <select id="lineType" class="setting-select">
                             <option value="ruled" selected>横罫線</option>
+                            <option value="ruled-dot">横罫線 (ドット入り)</option>
+                            <option value="dashed">横罫線 (点線)</option>
                             <option value="dot">ドット罫線</option>
                             <option value="graph">方眼 (グリッド)</option>
                         </select>
@@ -176,6 +178,10 @@
                             <button class="preset-btn" data-preset="elementary" id="presetElementary">
                                 <span class="preset-icon">✏️</span>
                                 <span class="preset-name">小学生用 (12mm)</span>
+                            </button>
+                            <button class="preset-btn" data-preset="dotruled" id="presetDotRuled">
+                                <span class="preset-icon">💠</span>
+                                <span class="preset-name">ドット入り (7mm)</span>
                             </button>
                         </div>
                     </div>

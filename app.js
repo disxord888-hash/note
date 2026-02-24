@@ -114,13 +114,29 @@ function drawPreview() {
     const drawW = displayWidth - mLeft - mRight;
     const drawH = displayHeight - mTop - mBottom;
 
-    if (s.lineType === 'ruled') {
+    if (s.lineType === 'ruled' || s.lineType === 'ruled-dot' || s.lineType === 'dashed') {
         for (let i = 1; i <= counts.rows; i++) {
             const y = mTop + i * spacingPx;
             ctx.beginPath();
+            if (s.lineType === 'dashed') {
+                ctx.setLineDash([2, 2]);
+            } else {
+                ctx.setLineDash([]);
+            }
             ctx.moveTo(mLeft, y);
             ctx.lineTo(displayWidth - mRight, y);
             ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (s.lineType === 'ruled-dot') {
+                const dotRadius = lineWidthPx * 1.2;
+                for (let j = 0; j <= counts.cols; j++) {
+                    const x = mLeft + j * spacingPx;
+                    ctx.beginPath();
+                    ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
         }
     } else if (s.lineType === 'graph') {
         // 横線
@@ -164,7 +180,7 @@ function drawPreview() {
         </div>
         <div class="info-item">
             <span class="info-label">種類</span>
-            <span class="info-value">${s.lineType === 'ruled' ? '横罫線' : s.lineType === 'dot' ? 'ドット' : '方眼'}</span>
+            <span class="info-value">${s.lineType === 'ruled' ? '横罫線' : s.lineType === 'ruled-dot' ? '横罫線 (ドット入り)' : s.lineType === 'dashed' ? '横罫線 (点線)' : s.lineType === 'dot' ? 'ドット' : '方眼'}</span>
         </div>
         <div class="info-item">
             <span class="info-label">ページ数</span>
@@ -202,10 +218,24 @@ function createPDFDoc() {
         doc.setFillColor(rgb.r, rgb.g, rgb.b);
         doc.setLineWidth(s.lineWidth * 0.3528); // pt -> mm
 
-        if (s.lineType === 'ruled') {
+        if (s.lineType === 'ruled' || s.lineType === 'ruled-dot' || s.lineType === 'dashed') {
             for (let i = 1; i <= counts.rows; i++) {
                 const y = s.marginTop + i * s.lineSpacing;
+                if (s.lineType === 'dashed') {
+                    doc.setLineDashPattern([1, 1], 0);
+                } else {
+                    doc.setLineDashPattern([], 0);
+                }
                 doc.line(s.marginLeft, y, s.pageWidth - s.marginRight, y);
+                doc.setLineDashPattern([], 0);
+
+                if (s.lineType === 'ruled-dot') {
+                    const dotR = s.lineWidth * 0.2; // mmでの半径目安
+                    for (let j = 0; j <= counts.cols; j++) {
+                        const x = s.marginLeft + j * s.lineSpacing;
+                        doc.circle(x, y, dotR, 'F');
+                    }
+                }
             }
         } else if (s.lineType === 'graph') {
             for (let i = 0; i <= counts.rows; i++) {
@@ -309,6 +339,14 @@ function applyPreset(preset) {
         case 'elementary':
             els.lineType.value = 'ruled';
             els.lineSpacing.value = 12;
+            els.marginTop.value = 21;
+            els.marginBottom.value = 10;
+            els.marginLeft.value = 0;
+            els.marginRight.value = 0;
+            break;
+        case 'dotruled':
+            els.lineType.value = 'ruled-dot';
+            els.lineSpacing.value = 7;
             els.marginTop.value = 21;
             els.marginBottom.value = 10;
             els.marginLeft.value = 0;
